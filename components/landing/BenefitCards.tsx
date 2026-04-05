@@ -90,9 +90,9 @@ const CARD_VARIANTS = {
     scale: 1,
     opacity: 1,
     transition: {
-      x:      { type: 'spring', stiffness: 340, damping: 26, mass: 0.95 },
-      rotate: { type: 'spring', stiffness: 340, damping: 26 },
-      scale:  { type: 'spring', stiffness: 380, damping: 28 },
+      x:      { type: 'spring' as const, stiffness: 340, damping: 26, mass: 0.95 },
+      rotate: { type: 'spring' as const, stiffness: 340, damping: 26 },
+      scale:  { type: 'spring' as const, stiffness: 380, damping: 28 },
       opacity: { duration: 0.1 },
     },
   },
@@ -102,7 +102,7 @@ const CARD_VARIANTS = {
     scale: 0.80,
     opacity: 0,
     transition: {
-      x:      { type: 'spring', stiffness: 500, damping: 34, mass: 0.8 },
+      x:      { type: 'spring' as const, stiffness: 500, damping: 34, mass: 0.8 },
       rotate: { duration: 0.2, ease: 'easeIn' as const },
       scale:  { duration: 0.18 },
       opacity: { duration: 0.14 },
