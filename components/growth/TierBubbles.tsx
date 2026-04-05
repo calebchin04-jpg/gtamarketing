@@ -10,7 +10,7 @@ const TIERS = [
     label: 'Small Node',
     price: '$10',
     period: '/mo',
-    r: 50,          // matches TIER_RADIUS.small
+    r: 38,          // matches TIER_RADIUS.small
     fill: 'rgba(18,18,18,0.92)',
     stroke: 'rgba(47,79,79,0.55)',
     strokeWidth: 1,
@@ -29,7 +29,7 @@ const TIERS = [
     label: 'Medium Node',
     price: '$50',
     period: '/mo',
-    r: 75,          // matches TIER_RADIUS.medium
+    r: 57,          // matches TIER_RADIUS.medium
     fill: 'rgba(18,18,18,0.92)',
     stroke: 'rgba(47,79,79,0.55)',
     strokeWidth: 1,
@@ -48,7 +48,7 @@ const TIERS = [
     label: 'Large Node',
     price: '$75',
     period: '/mo',
-    r: 110,         // matches TIER_RADIUS.large
+    r: 82,         // matches TIER_RADIUS.large
     fill: 'rgba(28,28,28,0.96)',
     stroke: 'rgba(220,220,220,0.5)',
     strokeWidth: 1.5,
@@ -72,9 +72,6 @@ export default function TierBubbles() {
   const [selected, setSelected] = useState<TierId | null>(null);
 
   const selectedTier = TIERS.find(t => t.id === selected);
-  const maxR = 110;
-  // SVG viewbox height = maxR*2 + glow ring (14px) + some padding
-  const svgH = (maxR + 20) * 2;
 
   return (
     <div className="w-full flex flex-col lg:flex-row items-center gap-8">
@@ -84,7 +81,9 @@ export default function TierBubbles() {
           const isSelected = selected === tier.id;
           const isOther = selected !== null && !isSelected;
           const scaleFactor = isSelected ? 1.25 : isOther ? 0.78 : 1;
-          const svgW = tier.r * 2 + 40; // glow ring + padding
+          const pad = 6;
+          const svgW = tier.r * 2 + pad;
+          const svgH = tier.r * 2 + pad;
 
           return (
             <motion.div
@@ -174,28 +173,28 @@ export default function TierBubbles() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
             transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-            className="flex-1 min-w-0 p-6 rounded-2xl border border-white/10 bg-black/50 backdrop-blur-md"
+            className="flex-1 min-w-0 p-4 rounded-xl border border-white/10 bg-black/50 backdrop-blur-md"
           >
             {/* Header */}
-            <div className="flex items-start justify-between mb-5">
+            <div className="flex items-start justify-between mb-3">
               <div>
                 <span className="text-xs tracking-widest uppercase text-[#2F4F4F] font-semibold font-display">
                   {selectedTier.badge}
                 </span>
-                <h3 className="text-white text-xl font-bold font-display mt-1">
+                <h3 className="text-white text-base font-bold font-display mt-0.5">
                   {selectedTier.label}
                 </h3>
               </div>
               <div className="text-right">
-                <span className="text-3xl font-black text-white font-display">{selectedTier.price}</span>
-                <span className="text-white/40 text-sm">/month</span>
+                <span className="text-2xl font-black text-white font-display">{selectedTier.price}</span>
+                <span className="text-white/40 text-xs">/month</span>
               </div>
             </div>
 
             {/* Features */}
-            <ul className="flex flex-col gap-3 mb-6">
+            <ul className="flex flex-col gap-2 mb-3">
               {selectedTier.features.map((f) => (
-                <li key={f} className="flex items-center gap-3 text-sm text-white/70">
+                <li key={f} className="flex items-center gap-2 text-xs text-white/70">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#2F4F4F] flex-shrink-0" />
                   {f}
                 </li>
@@ -203,7 +202,7 @@ export default function TierBubbles() {
             </ul>
 
             {/* Size context */}
-            <p className="text-xs text-white/30 leading-relaxed border-t border-white/5 pt-4">
+            <p className="text-xs text-white/30 leading-relaxed border-t border-white/5 pt-3">
               This is exactly how your node appears on the Live Constellation map —
               the size you see above matches what 40,000+ GTA residents will see.
             </p>

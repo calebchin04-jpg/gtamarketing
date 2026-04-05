@@ -48,7 +48,7 @@ export default function FoundingForm() {
     'w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 focus:outline-none focus:border-[#2F4F4F]/80 focus:bg-black/80 transition-colors duration-200';
 
   return (
-    <div className="w-full max-w-lg mx-auto">
+    <div className="w-full">
       <AnimatePresence mode="wait">
         {status === 'success' ? (
           <motion.div
@@ -144,15 +144,26 @@ export default function FoundingForm() {
               <p className="text-xs text-red-400/80">Something went wrong — please try again.</p>
             )}
 
-            <button
+            <motion.button
               type="submit"
               disabled={!tier || status === 'loading'}
-              className="w-full py-4 bg-white text-black font-bold uppercase tracking-widest text-sm
-                         hover:bg-white/90 active:scale-[0.98] transition-all duration-200
-                         disabled:opacity-30 disabled:cursor-not-allowed rounded-xl"
+              whileHover={{ scale: tier ? 1.02 : 1 }}
+              whileTap={{ scale: 0.98 }}
+              animate={tier && status === 'idle' ? {
+                boxShadow: [
+                  '0 0 0px rgba(255,255,255,0)',
+                  '0 0 22px rgba(255,255,255,0.22)',
+                  '0 0 0px rgba(255,255,255,0)',
+                ],
+              } : {}}
+              transition={{ duration: 2.5, ease: 'easeInOut', repeat: Infinity }}
+              className="w-full py-5 bg-white text-black font-black uppercase tracking-widest text-base
+                         hover:bg-white/95 transition-all duration-200
+                         disabled:opacity-30 disabled:cursor-not-allowed rounded-2xl"
+              style={{ fontSize: 15, letterSpacing: '0.18em' }}
             >
-              {status === 'loading' ? 'Submitting…' : 'Apply for Founding 30 →'}
-            </button>
+              {status === 'loading' ? 'Submitting…' : '⚡ Apply for Founding 30 →'}
+            </motion.button>
 
             <p className="text-center text-white/20 text-xs">
               No payment required now. We&apos;ll confirm your spot first.

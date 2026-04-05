@@ -2,13 +2,21 @@
 
 import dynamic from 'next/dynamic';
 import { INDUSTRIES } from '@/lib/mockData';
+import { CSSProperties } from 'react';
 
-// Dynamically import to avoid SSR issues (same pattern as LiveHub)
 const ConstellationCanvas = dynamic(() => import('@/components/ConstellationCanvas'), { ssr: false });
 
-export default function MiniConstellation() {
+interface MiniConstellationProps {
+  containerStyle?: CSSProperties;
+  radiusScale?: number;
+}
+
+export default function MiniConstellation({ containerStyle, radiusScale = 1 }: MiniConstellationProps = {}) {
   return (
-    <div className="relative w-full h-[280px] rounded-2xl overflow-hidden border border-white/8">
+    <div
+      className="relative w-full rounded-2xl overflow-hidden border border-white/8"
+      style={{ aspectRatio: '1 / 1', ...containerStyle }}
+    >
       {/* Vignette overlay so it looks contained */}
       <div className="absolute inset-0 z-10 pointer-events-none rounded-2xl"
         style={{ boxShadow: 'inset 0 0 60px rgba(0,0,0,0.85)' }} />
@@ -17,6 +25,8 @@ export default function MiniConstellation() {
         industries={INDUSTRIES}
         onBusinessSelect={() => {}}
         readOnly
+        compact
+        radiusScale={radiusScale}
       />
 
       {/* Label */}

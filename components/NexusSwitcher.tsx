@@ -193,7 +193,7 @@ export default function NexusSwitcher() {
               {isLiveActive ? '● Active' : '○ Switch'}
             </span>
             <span className="text-sm font-bold text-white tracking-wider font-display">
-              Live Hub
+              Live Map
             </span>
           </motion.div>
         </motion.div>
@@ -240,7 +240,7 @@ export default function NexusSwitcher() {
               {isGrowthActive ? '● Active' : '○ Switch'}
             </span>
             <span className="text-sm font-bold text-white tracking-wider font-display">
-              Growth Ecosystem
+              Home
             </span>
           </motion.div>
         </motion.div>

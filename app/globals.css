@@ -1,11 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --jet: #000000;
-  --slate-dark: #2F4F4F;
-  --gainsboro: #DCDCDC;
+  --jet: #0C0C0E;
+  --surface: #141416;
+  --surface-raised: #1C1C1F;
+  --slate-dark: #2D5A4F;
+  --accent-mid: #3B7265;
+  --accent-text: #5A9E8F;
+  --gainsboro: #EFEFEF;
+  --gold: #C9A870;
+  --gold-subtle: rgba(201,168,112,0.15);
   --white: #FFFFFF;
-  --accent-glow: rgba(47, 79, 79, 0.6);
+  --accent-glow: rgba(45,90,79,0.22);
+  --text-secondary: rgba(239,239,239,0.52);
+  --text-tertiary: rgba(239,239,239,0.28);
 }
 
 @theme inline {
@@ -25,8 +33,8 @@
 html, body {
   width: 100%;
   min-height: 100%;
-  background: #000000;
-  color: #DCDCDC;
+  background: #0C0C0E;
+  color: #EFEFEF;
   font-family: 'Inter', sans-serif;
   cursor: none;
 }
@@ -59,8 +67,8 @@ html, body {
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: #000; }
-::-webkit-scrollbar-thumb { background: #2F4F4F; border-radius: 2px; }
+::-webkit-scrollbar-track { background: #0C0C0E; }
+::-webkit-scrollbar-thumb { background: #2D5A4F; border-radius: 2px; }
 
 /* Animations */
 @keyframes fadeIn {
@@ -68,9 +76,14 @@ html, body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 8px 2px rgba(47,79,79,0.4); }
-  50%       { box-shadow: 0 0 24px 6px rgba(47,79,79,0.8); }
+  0%, 100% { box-shadow: 0 0 8px 2px rgba(45,90,79,0.4); }
+  50%       { box-shadow: 0 0 24px 6px rgba(45,90,79,0.8); }
 }
 
 @keyframes slide-in-right {
@@ -86,18 +99,19 @@ html, body {
 
 @keyframes neon-pulse {
   0%, 100% {
-    stroke: #00FFFF;
+    stroke: rgba(90,158,143,0.9);
     stroke-width: 1.5px;
-    filter: drop-shadow(0 0 4px rgba(0,255,255,0.6));
+    filter: drop-shadow(0 0 4px rgba(90,158,143,0.6));
   }
   50% {
-    stroke: #00FFFF;
+    stroke: rgba(90,158,143,1);
     stroke-width: 3px;
-    filter: drop-shadow(0 0 16px rgba(0,255,255,1));
+    filter: drop-shadow(0 0 16px rgba(90,158,143,0.8));
   }
 }
 
-.animate-fade-in   { animation: fadeIn 0.6s ease forwards; }
+.animate-fade-in    { animation: fadeIn 0.6s ease forwards; }
+.animate-slide-up   { animation: slide-up 0.5s cubic-bezier(0.16,1,0.3,1) forwards; }
 .animate-pulse-glow { animation: pulse-glow 2s infinite ease-in-out; }
 .animate-slide-in   { animation: slide-in-right 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .trending-glow      { animation: neon-pulse 2.5s infinite ease-in-out; }

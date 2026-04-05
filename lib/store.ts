@@ -20,7 +20,7 @@ interface SwitcherState {
 }
 
 export const useSwitcherStore = create<SwitcherState>((set) => ({
-  activeModule: 'liveHub',
+  activeModule: 'growthEcosystem',
   isSwitcherOpen: false,
   phase: 'idle',
 

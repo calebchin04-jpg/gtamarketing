@@ -22,25 +22,25 @@ export default function CircularEconomyFlow({ variant }: { variant: Variant }) {
   const inView = useInView(ref, { once: true, margin: '-60px' });
   const nodes = variant === 'consumer' ? CONSUMER_NODES : BUSINESS_NODES;
 
-  const W = 560;
-  const H = 120;
-  const nodeR = 42;
+  const W = 800;
+  const H = 180;
+  const nodeR = 64;
   const positions = [
-    { x: nodeR + 20, y: H / 2 },
+    { x: nodeR + 28, y: H / 2 },
     { x: W / 2, y: H / 2 },
-    { x: W - nodeR - 20, y: H / 2 },
+    { x: W - nodeR - 28, y: H / 2 },
   ];
 
   return (
     <div ref={ref} className="w-full flex flex-col items-center gap-4">
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        className="w-full max-w-xl"
+        className="w-full"
         style={{ overflow: 'visible' }}
       >
         <defs>
-          <marker id={`arrow-${variant}`} markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-            <path d="M0,0 L0,6 L8,3 z" fill="rgba(47,79,79,0.8)" />
+          <marker id={`arrow-${variant}`} markerWidth="12" markerHeight="12" refX="9" refY="4.5" orient="auto">
+            <path d="M0,0 L0,9 L12,4.5 z" fill="rgba(47,79,79,0.8)" />
           </marker>
         </defs>
 
@@ -56,7 +56,7 @@ export default function CircularEconomyFlow({ variant }: { variant: Variant }) {
               key={i}
               d={`M ${x1} ${y} L ${x2} ${y}`}
               stroke="rgba(47,79,79,0.6)"
-              strokeWidth="1.5"
+              strokeWidth="2"
               fill="none"
               strokeDasharray={`${len} ${len}`}
               strokeDashoffset={len}
@@ -71,7 +71,7 @@ export default function CircularEconomyFlow({ variant }: { variant: Variant }) {
         {variant === 'consumer' && (
           <motion.path
             d={`M ${positions[2].x} ${H / 2 - nodeR - 4}
-                C ${positions[2].x} ${-20}, ${positions[0].x} ${-20},
+                C ${positions[2].x} ${-30}, ${positions[0].x} ${-30},
                   ${positions[0].x} ${H / 2 - nodeR - 4}`}
             stroke="rgba(47,79,79,0.35)"
             strokeWidth="1"
@@ -115,9 +115,9 @@ export default function CircularEconomyFlow({ variant }: { variant: Variant }) {
               {/* Label */}
               <text
                 x={pos.x}
-                y={pos.y - 7}
+                y={pos.y - 10}
                 textAnchor="middle"
-                fontSize="9.5"
+                fontSize="13"
                 fill="#FFFFFF"
                 fontFamily="Space Grotesk, sans-serif"
                 fontWeight="600"
@@ -127,9 +127,9 @@ export default function CircularEconomyFlow({ variant }: { variant: Variant }) {
               </text>
               <text
                 x={pos.x}
-                y={pos.y + 8}
+                y={pos.y + 12}
                 textAnchor="middle"
-                fontSize="7.5"
+                fontSize="10"
                 fill="rgba(220,220,220,0.45)"
                 fontFamily="Inter, sans-serif"
                 style={{ pointerEvents: 'none' }}

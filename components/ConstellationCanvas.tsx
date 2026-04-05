@@ -22,20 +22,45 @@ type Props = {
   onBusinessSelect: (business: Business) => void;
   /** When true: disables click-to-zoom, cursor repulsion, and side panel interactions */
   readOnly?: boolean;
+  /** Multiply all node radii by this factor — use <1 for small containers like MiniConstellation */
+  radiusScale?: number;
+  /** ID of the currently selected business — renders gold stroke on that node */
+  selectedId?: string;
+  /** When true: uses space-filling force parameters — no center clustering, bubbles spread to fill the full container */
+  compact?: boolean;
 };
 
-// Radii tuned so 30 circles pack within a 1440x717 canvas without overlap
-// Total circle area targets ~60% of canvas = 1440*717*0.60 / 30 ≈ 20,621 px² → avg radius ~81px
-const TIER_RADIUS: Record<string, number> = { large: 127, medium: 86, small: 58 };
+// ── Dynamic radius computation ───────────────────────────────────────────────
+// All radii derived from actual canvas dimensions + node count so circles always
+// fit on screen regardless of viewport size or industry count.
+// Target: total bubble area ≈ 55% of canvas area.
 
-function getIndustryRadius(ind: Industry): number {
-  if (ind.revenue && ind.revenue > 0) {
-    return Math.max(69, Math.log10(ind.revenue + 1) * 22);
-  }
-  return 69 + ((ind.weight - 40) / 60) * 69;
+function computeBaseRadius(nodeCount: number, w: number, h: number, fill = 0.40): number {
+  const avgArea = (w * h * fill) / Math.max(nodeCount, 1);
+  return Math.sqrt(avgArea / Math.PI);
 }
 
-export default function ConstellationCanvas({ industries, onBusinessSelect, readOnly = false }: Props) {
+function computeIndustryRadius(ind: Industry, nodeCount: number, w: number, h: number): number {
+  const base   = computeBaseRadius(nodeCount, w, h, 0.40);
+  const maxR   = Math.min(w, h) * 0.14;              // cap at 14% of shorter dimension
+  let relScale: number;
+  if (ind.revenue && ind.revenue > 0) {
+    relScale = 0.75 + Math.min(0.4, Math.log10(ind.revenue + 1) / 10);
+  } else {
+    const wNorm = (Math.max(40, Math.min(100, ind.weight)) - 40) / 60; // 0→1
+    relScale = 0.75 + wNorm * 0.35;
+  }
+  return Math.max(22, Math.min(maxR, base * relScale));
+}
+
+function computeBusinessRadius(tier: string, nodeCount: number, w: number, h: number): number {
+  const base = computeBaseRadius(nodeCount, w, h, 0.40);
+  const maxR = Math.min(w, h) * 0.16;
+  const mult: Record<string, number> = { large: 1.4, medium: 1.0, small: 0.65 };
+  return Math.max(16, Math.min(maxR, base * (mult[tier] ?? 1.0)));
+}
+
+export default function ConstellationCanvas({ industries, onBusinessSelect, readOnly = false, radiusScale = 1, selectedId, compact = false }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simRef = useRef<d3.Simulation<NodeDatum, undefined> | null>(null);
   const mouseRef = useRef({ x: 0, y: 0 });
@@ -75,7 +100,8 @@ export default function ConstellationCanvas({ industries, onBusinessSelect, read
     h: number,
     onClickNode: (d: NodeDatum) => void,
     animateEntrance: boolean = true,
-    animateStagger: boolean = true
+    animateStagger: boolean = true,
+    isCompact: boolean = false
   ) => {
     simRef.current?.stop();
     const svg = d3.select(svgRef.current);
@@ -90,19 +116,39 @@ export default function ConstellationCanvas({ industries, onBusinessSelect, read
       .attr('fill', 'none').attr('stroke', 'rgba(47,79,79,0.07)').attr('stroke-width', 0.5);
     svg.append('rect').attr('width', w).attr('height', h).attr('fill', 'url(#grid)');
 
+    // Subtle center glow bloom
+    const radialGlow = defs.append('radialGradient')
+      .attr('id', 'center-glow').attr('cx', '50%').attr('cy', '50%').attr('r', '55%');
+    radialGlow.append('stop').attr('offset', '0%').attr('stop-color', 'rgba(45,90,79,0.08)');
+    radialGlow.append('stop').attr('offset', '100%').attr('stop-color', 'rgba(45,90,79,0)');
+    svg.append('ellipse')
+      .attr('cx', w / 2).attr('cy', h / 2)
+      .attr('rx', w * 0.55).attr('ry', h * 0.5)
+      .attr('fill', 'url(#center-glow)');
+
     const g = svg.append('g');
 
-    const sim = d3.forceSimulation<NodeDatum>(nodes)
-      .force('center', d3.forceCenter(w / 2, h / 2).strength(0.018)) // Weak center pull — lets bubbles spread to edges
-      .force('charge', d3.forceManyBody().strength(-220))             // Reduced repulsion so bubbles can reach corners
-      // iterations(4): resolves collisions 4x per tick — eliminates overlap almost completely
-      .force('collide', d3.forceCollide<NodeDatum>(d => (d.hoverRadius || d.radius) + 3).strength(1.0).iterations(4))
-      .force('x', d3.forceX(w / 2).strength(0.008)) // Very loose — allows full-width spread
-      .force('y', d3.forceY(h / 2).strength(0.008))
-      .alphaDecay(0.012)
-      // 0.65 = medium-heavy friction. They lose most kinetic energy but still glide and bounce a bit
-      // so the movement looks alive before settling.
-      .velocityDecay(0.65);
+    const sim = isCompact
+      ? d3.forceSimulation<NodeDatum>(nodes)
+          // Compact/fill mode: no center clustering — bubbles stay distributed where placed,
+          // only collision detection nudges them into non-overlapping positions.
+          .force('center', null)
+          .force('charge', d3.forceManyBody().strength(-8))  // Near-zero — just enough to discourage pile-ups
+          .force('collide', d3.forceCollide<NodeDatum>(d => (d.hoverRadius || d.radius) + 2).strength(1.0).iterations(12))
+          .force('x', d3.forceX(w / 2).strength(0.003))  // Bare minimum drift correction
+          .force('y', d3.forceY(h / 2).strength(0.003))
+          .alphaDecay(0.006)   // Settle slowly so collision has time to find good positions
+          .velocityDecay(0.72)
+      : d3.forceSimulation<NodeDatum>(nodes)
+          .force('center', d3.forceCenter(w / 2, h / 2).strength(0.025)) // Moderate center pull for tight clustering
+          .force('charge', d3.forceManyBody().strength(-160))             // Lower repulsion so bubbles pack closer
+          // iterations(16): many passes per tick — fully resolves overlap before nodes move again
+          .force('collide', d3.forceCollide<NodeDatum>(d => (d.hoverRadius || d.radius) + 2).strength(1.0).iterations(16))
+          .force('x', d3.forceX(w / 2).strength(0.012)) // Tighter pull toward center
+          .force('y', d3.forceY(h / 2).strength(0.012))
+          .alphaDecay(0.010)
+          // 0.7 = heavier friction — less bouncing, nodes settle into tight pack sooner
+          .velocityDecay(0.70);
 
     simRef.current = sim;
 
@@ -314,13 +360,13 @@ export default function ConstellationCanvas({ industries, onBusinessSelect, read
       .on('mouseenter', function (_, d) {
         if (d.type === 'industry') {
           // Hostile Hover: Expand physical collision radius and heat up sim
-          d.hoverRadius = d.radius * 1.5;
-          simRef.current?.force('collide', d3.forceCollide<NodeDatum>(n => (n.hoverRadius || n.radius) + 3).strength(1.0).iterations(4));
+          d.hoverRadius = d.radius * 1.15;
+          simRef.current?.force('collide', d3.forceCollide<NodeDatum>(n => (n.hoverRadius || n.radius) + 2).strength(1.0).iterations(16));
           simRef.current?.alpha(0.3).restart();
 
           d3.select(this).select<SVGGElement>('.inner')
             .transition().duration(400).ease(d3.easeCubicOut)
-            .style('transform', 'scale(1.5)');
+            .style('transform', 'scale(1.08)');
 
           // Hide standard label, show rich carousel details
           d3.select(this).select<SVGTextElement>('text.default-label')
@@ -340,18 +386,18 @@ export default function ConstellationCanvas({ industries, onBusinessSelect, read
         if (d.type === 'industry') {
           // Restore physical collision radius and let them settle back
           d.hoverRadius = undefined;
-          simRef.current?.force('collide', d3.forceCollide<NodeDatum>(n => (n.hoverRadius || n.radius) + 3).strength(1.0).iterations(4));
+          simRef.current?.force('collide', d3.forceCollide<NodeDatum>(n => (n.hoverRadius || n.radius) + 2).strength(1.0).iterations(16));
           simRef.current?.alpha(0.3).restart();
 
           d3.select(this).select<SVGGElement>('.inner')
             .transition().duration(500).ease(d3.easeCubicOut)
             .style('transform', 'scale(1)');
 
-          // Restore standard label
-          d3.select(this).select<SVGTextElement>('text.default-label')
-            .transition().duration(300).delay(100).style('opacity', 1);
+          // Restore standard label — carousel fades out first, then label fades in
           d3.select(this).select<SVGGElement>('.carousel')
-            .transition().duration(200).style('opacity', 0);
+            .transition().duration(200).delay(0).style('opacity', 0);
+          d3.select(this).select<SVGTextElement>('text.default-label')
+            .transition().duration(250).delay(150).style('opacity', 1);
         } else {
           d3.select(this).select<SVGCircleElement>('.body')
             .transition().duration(280)
@@ -423,15 +469,16 @@ export default function ConstellationCanvas({ industries, onBusinessSelect, read
     const animate = !hasAnimatedMacro.current;
 
     const nodes: NodeDatum[] = shuffledIndustries.map((ind, i) => {
-      // If returning, spawn spread across canvas. If first load, spawn wider for entrance animation.
-      const radiusMult = animate ? 0.72 : 0.55;
+      // compact: start all bubbles inside the container so they fill corners, not cluster in center.
+      // normal: wider spawn for cinematic entrance animation.
+      const radiusMult = compact ? 0.42 : (animate ? 0.72 : 0.55);
       const spiralR = Math.sqrt(i + 0.5) * (minDim * radiusMult) / Math.sqrt(shuffledIndustries.length);
       const angle = i * goldenAngle;
       const initialX = w / 2 + spiralR * Math.cos(angle);
       const initialY = h / 2 + spiralR * Math.sin(angle);
       return {
         id: ind.id, label: ind.name,
-        radius: getIndustryRadius(ind), type: 'industry', originalData: ind,
+        radius: computeIndustryRadius(ind, shuffledIndustries.length, w, h) * radiusScale, type: 'industry', originalData: ind,
         x: initialX, y: initialY,
         fx: animate ? initialX : null,
         fy: animate ? initialY : null
@@ -460,11 +507,11 @@ export default function ConstellationCanvas({ industries, onBusinessSelect, read
           setTransitioning(false);
         }, 680);
       }
-    }, animate);
+    }, animate, true, compact);
 
     // Once macro view has been shown, prevent future entrance animations
     hasAnimatedMacro.current = true;
-  }, [industries, buildSim, transitioning]);
+  }, [industries, buildSim, transitioning, compact]);
 
   // ── Micro view ────────────────────────────────────────────────────────────
   const showMicro = useCallback((industryId: string) => {
@@ -483,7 +530,7 @@ export default function ConstellationCanvas({ industries, onBusinessSelect, read
       const angle = i * goldenAngle;
       return {
         id: biz.id, label: biz.name,
-        radius: TIER_RADIUS[biz.tier],
+        radius: computeBusinessRadius(biz.tier, sorted.length, w, h) * radiusScale,
         type: 'business', tier: biz.tier, originalData: biz,
         x: w / 2 + spiralR * Math.cos(angle),
         y: h / 2 + spiralR * Math.sin(angle),
@@ -527,6 +574,18 @@ export default function ConstellationCanvas({ industries, onBusinessSelect, read
     // Only run once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Gold stroke on selected business ─────────────────────────────────────
+  useEffect(() => {
+    const svg = d3.select(svgRef.current);
+    svg.selectAll<SVGCircleElement, NodeDatum>('circle.body')
+      .attr('stroke', (d: NodeDatum) => {
+        if (d.id === selectedId) return 'rgba(201,168,112,0.85)';
+        if (d.tier === 'large') return 'rgba(220,220,220,0.5)';
+        return 'rgba(47,79,79,0.55)';
+      })
+      .attr('stroke-width', (d: NodeDatum) => d.id === selectedId ? 2.5 : d.tier === 'large' ? 1.5 : 1);
+  }, [selectedId]);
 
   // ── Background click = zoom out ───────────────────────────────────────────
   const handleBgClick = () => {
